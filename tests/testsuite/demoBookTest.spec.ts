@@ -64,8 +64,8 @@ test('User failed to login with invalid credential', async ({ page }) => {
   const commonMethod = new CommonMethod(page);
   const demoBookLogin = new DemoBookLoginPages(page);
 
-  let username = 'invalidUser';
-  let password = 'invalidPass';
+  let username = userNameGlobal;
+  let password = passwordGlobal;
 
   await commonMethod.goToUrl(URL_BOOKS, 30000);
   await demoBookLogin.clickLoginButton();
@@ -73,12 +73,21 @@ test('User failed to login with invalid credential', async ({ page }) => {
 
   const [responseJson] = await Promise.all([
       commonMethod.getAPIResponse('/Account/v1/GenerateToken', 200),
-      demoBookLogin.fillLoginCredential(username, password),
+      demoBookLogin.fillLoginCredential(username, 'invalid' + password),
       
     ]);
   expect(responseJson.status).toEqual("Failed");
   await demoBookLogin.validateInvalidLoginMessage();
-  console.log("Invalid login attempt validated successfully");
+  console.log("Login attempt with invalid password validated successfully");
+
+  const [responseJson2] = await Promise.all([
+      commonMethod.getAPIResponse('/Account/v1/GenerateToken', 200),
+      demoBookLogin.fillLoginCredential('invalid'+username, passwordGlobal),
+
+    ]);
+  expect(responseJson2.status).toEqual("Failed");
+  await demoBookLogin.validateInvalidLoginMessage();
+  console.log("Login attempt with invalid password validated successfully");
 });
 
 test('User search for a book successfully', async ({ page }) => {
