@@ -26,10 +26,10 @@ test('User successfully register new account', async ({ page }) => {
   await demoBookLogin.validateLoginPage();
   await demoBookLogin.clickRegisterButton();
   await demoBookLogin.validateRegisterPage();
+  await demoBookLogin.fillRegisterCredential(firstName, lastName, userName, password);
   const [responseJson] = await Promise.all([
       commonMethod.getAPIResponse('/Account/v1/User', 201),
-      demoBookLogin.fillRegisterCredential(firstName, lastName, userName, password),
-
+      demoBookLogin.clickButtonRegister()
     ]);
   expect(responseJson.username).toEqual(userName);
   console.log("User successfully registered new account");
@@ -47,11 +47,19 @@ test('User successfully login with existing account to book page', async ({ page
   await demoBookLogin.clickLoginButton();
   await demoBookLogin.validateLoginPage();
 
-  const [responseJson] = await Promise.all([
-      commonMethod.getAPIResponse('/BookStore/v1/Books', 200),
+  // a successful login always lands on the profile page, the book list is only
+  // fetched once we navigate on to the store from there
+  await Promise.all([
       commonMethod.getAPIResponse('/Account/v1/Login', 200),
       demoBookLogin.fillLoginCredential(username, password),
-      
+
+    ]);
+
+  await demoBookPage.validateNavigateToProfilePage(username);
+
+  const [responseJson] = await Promise.all([
+      commonMethod.getAPIResponse('/BookStore/v1/Books', 200),
+      demoBookPage.clickGoToBookStore(),
     ]);
 
   const titleBookList = responseJson.books.map((book: any) => book.title);
@@ -103,11 +111,17 @@ test('User search for a book successfully', async ({ page }) => {
   await demoBookLogin.clickLoginButton();
   await demoBookLogin.validateLoginPage();
 
-  const [responseJson] = await Promise.all([
-      commonMethod.getAPIResponse('/BookStore/v1/Books', 200),
+  await Promise.all([
       commonMethod.getAPIResponse('/Account/v1/Login', 200),
       demoBookLogin.fillLoginCredential(username, password),
-      
+
+    ]);
+
+  await demoBookPage.validateNavigateToProfilePage(username);
+
+  const [responseJson] = await Promise.all([
+      commonMethod.getAPIResponse('/BookStore/v1/Books', 200),
+      demoBookPage.clickGoToBookStore(),
     ]);
 
   const titleBookList = responseJson.books.map((book: any) => book.title);
@@ -150,4 +164,57 @@ test('User search for a non-existing book', async ({ page }) => {
   await demoBookPage.validateBookHomepage(true,titleBookList, username);
   await demoBookPage.searchBook(bookTitleToSearch);
   console.log("Non-existing book search validated successfully");
+});
+
+test('User successfully add a book to collection and delete it', async ({ page }) => {
+  const commonMethod = new CommonMethod(page);
+  const demoBookLogin = new DemoBookLoginPages(page);
+  const demoBookPage = new DemoBookHomepage(page);
+
+  let username = userNameGlobal;
+  let password = passwordGlobal;
+  let bookTitleToAdd = 'Learning JavaScript Design Patterns';
+
+  await commonMethod.goToUrl(URL_BOOKS, 30000);
+  await demoBookLogin.clickLoginButton();
+  await demoBookLogin.validateLoginPage();
+
+  await Promise.all([
+      commonMethod.getAPIResponse('/Account/v1/Login', 200),
+      demoBookLogin.fillLoginCredential(username, password),
+
+    ]);
+
+  await demoBookPage.validateNavigateToProfilePage(username);
+
+  const [responseJson] = await Promise.all([
+      commonMethod.getAPIResponse('/BookStore/v1/Books', 200),
+      demoBookPage.clickGoToBookStore(),
+    ]);
+
+  const titleBookList = responseJson.books.map((book: any) => book.title);
+  await demoBookPage.validateBookHomepage(true,titleBookList, username);
+  await demoBookPage.searchBook(bookTitleToAdd);
+
+  const bookIds = await demoBookPage.getBookIdsOnPage(bookTitleToAdd);
+  expect(bookIds.length).toBeGreaterThan(0);
+  await demoBookPage.navigateToBookDetails(bookTitleToAdd, bookIds[0]);
+
+  const [, addMessage] = await Promise.all([
+      commonMethod.validateAPIResponse('/BookStore/v1/Books', 201, 'POST'),
+      demoBookPage.addBookToCollection(),
+    ]);
+  expect(addMessage).toEqual("Book added to your collection.");
+  console.log("Book added to the collection successfully");
+
+  await demoBookPage.clickProfileMenu();
+  await demoBookPage.validateBookInCollection(bookTitleToAdd, bookIds[0]);
+
+  const [, deleteMessage] = await Promise.all([
+      commonMethod.validateAPIResponse('/BookStore/v1/Book', 204, 'DELETE'),
+      demoBookPage.deleteBookFromCollection(bookIds[0]),
+    ]);
+  expect(deleteMessage).toEqual("Book deleted.");
+  await demoBookPage.validateEmptyCollection();
+  console.log("Book deleted from the collection successfully");
 });

@@ -11,7 +11,7 @@ const classConstant =  {
     lblPassword: 'xpath=//label[@id="password-label"]',
     btnLogin: 'xpath=//button[@id="login"]',
     btnRegister: 'xpath=//button[@id="newUser"]',
-    imgLogoPage: 'xpath=//img[@src="/images/Toolsqa.jpg"]',
+    imgLogoPage: 'xpath=//img[contains(@src,"Toolsqa")]',
     frmPannelMenu: 'xpath=//div[@class="left-pannel"]',
     lblPannelMenu: 'xpath=//div[@class="header-text"]/child::text()',
     lblRegisterPageTitle: 'xpath=//h4[text()="Register to Book Store"]',
@@ -73,7 +73,7 @@ export class DemoBookLoginPages {
         await this.page.fill(classConstant.txtPassword, password);
         console.log("Login Credential filled successfully");
 
-        this.page.click(classConstant.btnLogin);
+        await this.page.click(classConstant.btnLogin);
         console.log("Login button clicked successfully");
         
     }
@@ -109,13 +109,9 @@ export class DemoBookLoginPages {
         await this.page.fill(classConstant.txtUserNameRegister, username);
         await this.page.fill(classConstant.txtPasswordRegister, password);
         console.log("Register Credential filled successfully");
+    }
 
-        //handle captcha
-
-        // await expect(this.page.locator(classConstant.chkCaptcha)).toBeVisible({ timeout: 10000 });
-        // await this.page.click(classConstant.chkCaptcha);
-        console.log("Captcha clicked successfully");
-
+    async clickButtonRegister(){
         await this.page.click(classConstant.btnRegisterUser);
         console.log("Register User button clicked successfully");
     }

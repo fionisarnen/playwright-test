@@ -38,4 +38,15 @@ export class CommonMethod {
         return responseBody;
     }
 
+    // use for endpoints that answer without a body, or that share a prefix with another
+    // endpoint and can only be told apart by the request method
+    async validateAPIResponse(endpoint: string, status: number, method: string) {
+        const response = await this.page.waitForResponse(
+            resp => resp.url().includes(endpoint) && resp.request().method() === method,
+            { timeout: 20000 }
+        );
+        expect(response.status()).toBe(status);
+        console.log(method + " " + endpoint + " responded with status " + status);
+    }
+
 }
